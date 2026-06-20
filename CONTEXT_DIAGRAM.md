@@ -6,7 +6,7 @@ Dokumen ini mendokumentasikan DFD Level 0 (Context Diagram) dan DFD Level 1 dari
 
 ## Level 0 — System Context Diagram
 
-Menggambarkan sistem **Faedah Shop** dan seluruh entitas eksternal yang berinteraksi dengannya. Pada level ini, sistem dibagi menjadi komponen klien (**React Frontend SPA**) dan komponen server (**Express & Postgres Backend**) untuk menggambarkan aliran data di antara keduanya beserta aktor-aktor eksternal.
+Menggambarkan sistem **Faedah Shop** dan seluruh entitas eksternal yang berinteraksi dengannya. Pada level ini, sistem dibagi menjadi komponen klien (**React Frontend**) dan komponen server (**Express & Postgres Backend**) untuk menggambarkan aliran data di antara keduanya beserta aktor-aktor eksternal.
 
 ### 1. Diagram Mermaid (Grafis)
 
@@ -14,7 +14,7 @@ Menggambarkan sistem **Faedah Shop** dan seluruh entitas eksternal yang berinter
 graph TD
     %% Nodes
     Backend["EXPRESS & POSTGRES BACKEND<br>(Authentication, Database, Storage, Server Logic)"]
-    System["FAEDAH SHOP SYSTEM<br>(React Frontend SPA)"]
+    System["FAEDAH SHOP SYSTEM<br>(React Frontend)"]
     Customer["CUSTOMER"]
     Admin["ADMIN"]
     Owner["OWNER"]
@@ -56,7 +56,7 @@ graph TD
  ┌──────────────────────┐             ┌──────────────────┴──────────────────────┐             ┌──────────────────────┐
  │                      ├────────────►│                                         │◄────────────┤                      │
  │       CUSTOMER       │             │           FAEDAH SHOP SYSTEM            │             │        ADMIN         │
- │                      │◄────────────┤          (React Frontend SPA)           ├────────────►│                      │
+ │                      │◄────────────┤            (React Frontend)             ├────────────►│                      │
  └──────────────────────┘             └──────────────────┬──────────────────────┘             └──────────────────────┘
   - View Product Catalog                                 │ ▲                                   - Manage Products
   - Customize Bouquet                                    │ │ View Sales Reports,               - Manage Orders
@@ -84,7 +84,7 @@ graph TD
 | **Express & Postgres Backend** | Komponen server lokal yang melayani logika bisnis dan penyimpanan data | Requests, Data Responses, Authentication, File Access | Read / Write Data, Authenticate Users, Store Files, Execute Server Logic |
 
 > [!NOTE]
-> Pada diagram konteks di atas, **Backend (Express & Postgres Backend)** digambarkan secara terpisah untuk memperjelas batas interaksi antara aplikasi klien (*React Frontend SPA*) dengan layanan server (*Backend API*).
+> Pada diagram konteks di atas, **Backend (Express & Postgres Backend)** digambarkan secara terpisah untuk memperjelas batas interaksi antara aplikasi klien (*React Frontend*) dengan layanan server (*Backend API*).
 
 ---
 
