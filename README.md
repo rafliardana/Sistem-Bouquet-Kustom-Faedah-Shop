@@ -4,7 +4,8 @@ Sistem e-commerce dan kustomisasi bouquet bunga berbasis web yang modern, intera
 
 <img width="1536" height="1024" alt="ChatGPT Image 21 Jun 2026, 01 32 35" src="https://github.com/user-attachments/assets/a63c9fd7-95a1-487f-b8ef-a6f5a23382c8" />
 
-<img width="962" height="1167" alt="diagram-export-21-6-2026-00 43 57" src="https://github.com/user-attachments/assets/78fc9503-0bb2-4476-a26a-a0cba09913c0" />
+<img width="962" height="1067" alt="diagram-export-21-6-2026-00 43 57" src="https://github.com/user-attachments/assets/c52b35d1-1a80-4b44-9eef-af7af5920c48" />
+
 
 <img width="808" height="634" alt="Untitled" src="https://github.com/user-attachments/assets/4c131600-2349-43f0-98da-c068fc1c51a0" />
 
