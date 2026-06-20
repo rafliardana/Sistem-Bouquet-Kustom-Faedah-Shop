@@ -2,247 +2,200 @@
 
 ## Ringkasan Arsitektur
 
-Aplikasi menggunakan **Supabase** sebagai backend:
-- **Auth** → tabel bawaan Supabase untuk autentikasi user
-- **KV Store** → tabel `kv_store_205999f8` sebagai penyimpanan dokumen (key-value)
-- **Storage** → bucket `make-205999f8-uploads` untuk file gambar
+Aplikasi menggunakan **PostgreSQL** lokal sebagai backend database relasional dan **Express.js** untuk server API & otentikasi JWT:
+- **`users`** → Tabel relasional untuk data otentikasi (JWT + bcrypt lokal) dan role user.
+- **`products`** → Tabel relasional dengan kolom JSONB untuk data sub-elemen (`sizes` dan `addons`).
+- **`orders`** → Tabel relasional dengan kolom JSONB untuk snapshot data produk dan kustomisasi pada saat transaksi dibuat.
+- **`payment_methods`** → Tabel relasional untuk menyimpan konfigurasi pembayaran.
+- **`uploads/`** → Folder penyimpanan lokal pada disk server Express.js untuk file gambar.
 
 ---
 
 ## Entity Relation Diagram (ERD)
 
 ```
-┌─────────────────────────────────────┐
-│             UserProfile             │
-├─────────────────────────────────────┤
-│ PK  id          : string (UUID)     │
-│     email       : string            │
-│     name        : string            │
-│     role        : "owner"           │
-│                   "admin"           │
-│                   "customer"        │
-│     createdAt   : timestamp         │
-└──────────────┬──────────────────────┘
-               │ 1
-               │
-               │ has many
-               │
-               ▼ N
-┌─────────────────────────────────────┐
-│                Order                │
-├─────────────────────────────────────┤
-│ PK  id              : string (UUID) │
-│     orderNumber     : string        │  ← "FLR-XXXXXX"
-│ FK  userId          : string        │  → UserProfile.id
-│     customerName    : string        │
-│     customerEmail   : string        │
-│     customerPhone   : string        │
-│     customerAddress : string        │
-│     totalPrice      : number (IDR)  │
-│     status          : OrderStatus   │
-│ FK  paymentMethod   : string        │  → PaymentMethod.id
-│     paymentMethodLabel : string     │
-│     paymentProofPath   : string?    │  → Storage (proof/)
-│     createdAt       : timestamp     │
-│                                     │
-│  [embedded] product  : Product      │  ← snapshot saat pesan
-│  [embedded] customization           │  ← snapshot saat pesan
-└──────────────┬──────────────────────┘
-               │ 1
-               │ contains (embedded)
-               │
-               ▼ 1
-┌─────────────────────────────────────┐
-│            Customization            │
-│          (embedded in Order)        │
-├─────────────────────────────────────┤
-│ FK  sizeId              : string    │  → SizeOption.id
-│     description         : string    │
-│     selectedAddonIds    : string[]  │  → Addon.id[]
-│     referenceImagePath  : string?   │  → Storage (reference/)
-│     referenceImagePreview : string? │  ← signed URL (temp)
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│                  users                   │
+├──────────────────────────────────────────┤
+│ PK  id            : UUID                 │
+│     email         : VARCHAR(255) (UQ)    │
+│     password_hash : VARCHAR(255)         │
+│     name          : VARCHAR(255)         │
+│     role          : VARCHAR(20)          │  ← "owner", "admin", "customer"
+│     created_at    : TIMESTAMPTZ          │
+└───────────────────┬──────────────────────┘
+                    │ 1
+                    │
+                    │ has many
+                    │
+                    ▼ N
+┌──────────────────────────────────────────┐
+│                  orders                  │
+├──────────────────────────────────────────┤
+│ PK  id                   : VARCHAR(100)  │
+│     order_number         : VARCHAR(20)   │  ← "FLR-XXXXXX"
+│ FK  user_id              : UUID          │  → users.id
+│     customer_email       : VARCHAR(255)  │
+│     customer_name        : VARCHAR(255)  │
+│     customer_phone       : VARCHAR(50)   │
+│     customer_address     : TEXT          │
+│     total_price          : INTEGER       │
+│     status               : VARCHAR(30)   │  ← status pesanan
+│     payment_method       : VARCHAR(50)   │
+│     payment_method_label : VARCHAR(100)  │
+│     payment_proof_path   : TEXT          │  ← path disk lokal (/uploads)
+│     created_at           : TIMESTAMPTZ   │
+│                                          │
+│     [JSONB] product      : JSONB         │  ← snapshot data Product
+│     [JSONB] customization: JSONB         │  ← snapshot data Customization
+└───────────────────┬──────────────────────┘
+                    │ 1
+                    │ contains (embedded JSONB)
+                    │
+                    ▼ 1
+┌──────────────────────────────────────────┐
+│              customization               │
+│           (embedded in orders)           │
+├──────────────────────────────────────────┤
+│     sizeId              : string         │  ← "S", "M", "L", "XL"
+│     description         : string         │
+│     selectedAddonIds    : string[]       │
+│     referenceImagePath  : string?        │  ← path disk lokal (/uploads)
+└──────────────────────────────────────────┘
 
 
-┌─────────────────────────────────────┐
-│              Product                │
-├─────────────────────────────────────┤
-│ PK  id          : string            │
-│     name        : string            │
-│     description : string            │
-│     basePrice   : number (IDR)      │
-│     image       : string (URL)      │
-│     category    : string            │
-│     sizes       : SizeOption[]      │  ← embedded array
-│     addons      : Addon[]           │  ← embedded array
-└──────────────┬──────────────────────┘
-               │ 1
-               │ has many (embedded)
-               ├────────────────────────────────────────────┐
-               ▼ N                                          ▼ N
-┌──────────────────────────────┐    ┌───────────────────────────────────┐
-│          SizeOption          │    │               Addon               │
-│      (embedded in Product)   │    │         (embedded in Product)     │
-├──────────────────────────────┤    ├───────────────────────────────────┤
-│ PK  id              : string │    │ PK  id     : string               │
-│     label           : string │    │     label  : string               │
-│     stems           : string │    │     price  : number (IDR)         │
-│     priceMultiplier : number │    └───────────────────────────────────┘
-└──────────────────────────────┘
+┌──────────────────────────────────────────┐
+│                 products                 │
+├──────────────────────────────────────────┤
+│ PK  id          : VARCHAR(50)            │
+│     name        : VARCHAR(255)           │
+│     description : TEXT                   │
+│     base_price  : INTEGER                │
+│     image       : TEXT (URL/Path)        │
+│     category    : VARCHAR(100)           │
+│     sizes       : JSONB                  │  ← SizeOption[] (embedded array)
+│     addons      : JSONB                  │  ← Addon[] (embedded array)
+│     created_at  : TIMESTAMPTZ            │
+└───────────────────┬──────────────────────┘
+                    │ 1
+                    │ contains (embedded arrays in JSONB)
+                    ├───────────────────────────────────────────┐
+                    ▼ N                                         ▼ N
+┌──────────────────────────────────────┐    ┌───────────────────────────────────┐
+│              SizeOption              │    │               Addon               │
+│         (embedded in products)       │    │       (embedded in products)      │
+├──────────────────────────────────────┤    ├───────────────────────────────────┤
+│     id              : string (S/M/L) │    │     id     : string (vase/ribbon) │
+│     label           : string         │    │     label  : string               │
+│     stems           : string         │    │     price  : number (IDR)         │
+│     priceMultiplier : number         │    └───────────────────────────────────┘
+└──────────────────────────────────────┘
 
 
-┌─────────────────────────────────────┐
-│           PaymentMethod             │
-├─────────────────────────────────────┤
-│ PK  id          : string            │
-│     label       : string            │  ← "Transfer BCA", "GoPay", dll.
-│     detail      : string            │  ← nomor rekening / kontak
-│     needsProof  : boolean           │  ← wajib upload bukti transfer?
-└─────────────────────────────────────┘
-
-
-┌─────────────────────────────────────┐
-│           SalesStats                │
-│         (computed / view)           │
-├─────────────────────────────────────┤
-│     totalOrders    : number         │
-│     totalRevenue   : number (IDR)   │
-│     statusCounts   : Record<        │
-│       OrderStatus, number>          │
-│     revenueByDay   : Array<{        │
-│       date, revenue, orders }>      │
-│     topProducts    : Array<{        │
-│       name, count }>                │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│             payment_methods              │
+├──────────────────────────────────────────┤
+│ PK  id          : VARCHAR(50)            │
+│     label       : VARCHAR(100)           │  ← "Transfer BCA", "GoPay", dll.
+│     detail      : TEXT                   │  ← nomor rekening / nomor HP
+│     needs_proof : BOOLEAN                │  ← wajib upload bukti bayar?
+└──────────────────────────────────────────┘
 ```
 
 ---
 
-## Tabel Entity & Atribut Lengkap
+## Tabel Entity & Atribut Lengkap (PostgreSQL)
 
-### 1. UserProfile
+### 1. Tabel: `users`
 
-| Kolom       | Tipe      | Keterangan                                      |
-|-------------|-----------|--------------------------------------------------|
-| `id`        | UUID (PK) | Dari Supabase Auth                               |
-| `email`     | string    | Email login                                      |
-| `name`      | string    | Nama lengkap                                     |
-| `role`      | enum      | `owner` / `admin` / `customer`                   |
-| `createdAt` | timestamp | Waktu registrasi                                 |
-
-**Akses per role:**
-- `customer` → registrasi mandiri, akses katalog & pesanan sendiri
-- `admin` → kelola pesanan & produk
-- `owner` → akses penuh + dashboard statistik + kelola akun admin
+| Kolom | Tipe Data | Atribut | Keterangan |
+|---|---|---|---|
+| `id` | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | ID unik pengguna |
+| `email` | VARCHAR(255) | UNIQUE, NOT NULL | Alamat email untuk login |
+| `password_hash` | VARCHAR(255) | NOT NULL | Password yang di-hash dengan bcrypt |
+| `name` | VARCHAR(255) | NOT NULL | Nama lengkap pengguna |
+| `role` | VARCHAR(20) | NOT NULL, DEFAULT 'customer' | Peran pengguna (`owner`, `admin`, `customer`) |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Waktu registrasi akun |
 
 ---
 
-### 2. Product
+### 2. Tabel: `products`
 
-| Kolom         | Tipe        | Keterangan                                 |
-|---------------|-------------|---------------------------------------------|
-| `id`          | string (PK) | Identifier produk                           |
-| `name`        | string      | Nama bouquet (Mawar, Tulip, dsb.)           |
-| `description` | string      | Deskripsi singkat                           |
-| `basePrice`   | number      | Harga dasar (IDR)                           |
-| `image`       | string      | URL foto produk (Unsplash)                  |
-| `category`    | string      | Kategori (Mawar / Tulip / Bunga Kering/…)  |
-| `sizes`       | array       | Daftar `SizeOption` yang tersedia           |
-| `addons`      | array       | Daftar `Addon` yang tersedia                |
+| Kolom | Tipe Data | Atribut | Keterangan |
+|---|---|---|---|
+| `id` | VARCHAR(50) | PRIMARY KEY | ID unik produk (misal: `p1`, `p2`) |
+| `name` | VARCHAR(255) | NOT NULL | Nama bouquet bunga |
+| `description` | TEXT | | Deskripsi produk bouquet |
+| `base_price` | INTEGER | NOT NULL, DEFAULT 0 | Harga dasar bouquet |
+| `image` | TEXT | | URL atau nama path gambar utama produk |
+| `category` | VARCHAR(100) | DEFAULT 'Campur' | Kategori bouquet (Mawar / Tulip / dll.) |
+| `sizes` | JSONB | DEFAULT '[]' | Menyimpan array struktur objek `SizeOption` |
+| `addons` | JSONB | DEFAULT '[]' | Menyimpan array struktur objek `Addon` |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Waktu produk ditambahkan |
 
-**Kategori produk yang ada:**
-Mawar · Tulip · Bunga Matahari · Bunga Kering · Campur · Kombinasi Spesial
-
----
-
-### 3. SizeOption *(embedded dalam Product)*
-
-| Kolom             | Tipe   | Keterangan                      |
-|-------------------|--------|---------------------------------|
-| `id`              | string | `S` / `M` / `L` / `XL`         |
-| `label`           | string | "Kecil" / "Sedang" / dll.       |
-| `stems`           | string | Deskripsi jumlah tangkai        |
-| `priceMultiplier` | number | Pengali harga dasar produk      |
-
----
-
-### 4. Addon *(embedded dalam Product)*
-
-| Kolom   | Tipe   | Keterangan                              |
-|---------|--------|-----------------------------------------|
-| `id`    | string | `vase` / `ribbon` / `card` / `premium`  |
-| `label` | string | "Vas Bunga" / "Pita" / dll.             |
-| `price` | number | Harga tambahan (IDR)                    |
-
-**Addon yang tersedia:**
-- `vase` → Vas Bunga
-- `ribbon` → Pita Dekoratif
-- `card` → Kartu Ucapan
-- `premium` → Wrapping Premium
-
----
-
-### 5. Order
-
-| Kolom                | Tipe      | Keterangan                                        |
-|----------------------|-----------|---------------------------------------------------|
-| `id`                 | UUID (PK) | Identifier pesanan                                |
-| `orderNumber`        | string    | Nomor human-readable `FLR-XXXXXX`                 |
-| `userId`             | UUID (FK) | Referensi ke `UserProfile.id`                     |
-| `customerName`       | string    | Nama pemesan                                      |
-| `customerEmail`      | string    | Email pemesan                                     |
-| `customerPhone`      | string    | Nomor HP pemesan                                  |
-| `customerAddress`    | string    | Alamat pengiriman                                 |
-| `product`            | object    | Snapshot `Product` saat pesanan dibuat            |
-| `customization`      | object    | Snapshot `Customization` (lihat tabel 6)          |
-| `totalPrice`         | number    | Harga akhir setelah kalkulasi (IDR)               |
-| `status`             | enum      | Status pesanan (lihat alur di bawah)              |
-| `paymentMethod`      | string (FK)| Referensi ke `PaymentMethod.id`                  |
-| `paymentMethodLabel` | string    | Label metode pembayaran (cache)                   |
-| `paymentProofPath`   | string?   | Path file di Supabase Storage (`proof/…`)         |
-| `createdAt`          | timestamp | Waktu pesanan dibuat                              |
-
-**Kalkulasi harga:**
+#### Struktur data `SizeOption` di dalam JSONB:
+```json
+{
+  "id": "S",
+  "label": "Kecil",
+  "stems": "5–7 tangkai",
+  "priceMultiplier": 1.0
+}
 ```
-totalPrice = product.basePrice × size.priceMultiplier + Σ addon.price
+
+#### Struktur data `Addon` di dalam JSONB:
+```json
+{
+  "id": "vase",
+  "label": "Vas Bunga",
+  "price": 75000
+}
 ```
 
 ---
 
-### 6. Customization *(embedded dalam Order)*
+### 3. Tabel: `orders`
 
-| Kolom                    | Tipe     | Keterangan                                    |
-|--------------------------|----------|-----------------------------------------------|
-| `sizeId`                 | string   | Referensi ke `SizeOption.id`                  |
-| `description`            | string   | Permintaan khusus dari pelanggan               |
-| `selectedAddonIds`       | string[] | Array ID addon yang dipilih                   |
-| `referenceImagePath`     | string?  | Path file di Storage (`reference/…`)          |
-| `referenceImagePreview`  | string?  | Signed URL sementara untuk preview            |
+| Kolom | Tipe Data | Atribut | Keterangan |
+|---|---|---|---|
+| `id` | VARCHAR(100) | PRIMARY KEY | ID unik pesanan (generated timestamp-random) |
+| `order_number` | VARCHAR(20) | NOT NULL | Nomor pesanan berformat `FLR-XXXXXX` |
+| `user_id` | UUID | FOREIGN KEY REFERENCES `users(id)` | ID pembeli (pelanggan terdaftar) |
+| `customer_email` | VARCHAR(255) | | Email pembeli |
+| `customer_name` | VARCHAR(255) | | Nama penerima / pembeli |
+| `customer_phone` | VARCHAR(50) | | Nomor telepon pembeli |
+| `customer_address` | TEXT | | Alamat lengkap pengiriman |
+| `product` | JSONB | NOT NULL | Snapshot data `Product` lengkap saat dipesan |
+| `customization` | JSONB | NOT NULL | Snapshot data `Customization` saat dipesan |
+| `total_price` | INTEGER | NOT NULL | Nilai transaksi akhir dalam rupiah |
+| `status` | VARCHAR(30) | DEFAULT 'menunggu_konfirmasi' | `menunggu_konfirmasi`, `dalam_proses`, `pesanan_siap`, `selesai` |
+| `payment_method` | VARCHAR(50) | | ID metode pembayaran yang dipilih |
+| `payment_method_label` | VARCHAR(100) | | Nama/Label metode pembayaran |
+| `payment_proof_path` | TEXT | | Nama file bukti transfer yang disimpan di server |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Tanggal & waktu transaksi |
 
 ---
 
-### 7. PaymentMethod
+### 4. Tabel: `payment_methods`
 
-| Kolom        | Tipe        | Keterangan                             |
-|--------------|-------------|----------------------------------------|
-| `id`         | string (PK) | `bca` / `mandiri` / `gopay` / `ovo` / `cod` |
-| `label`      | string      | "Transfer BCA" / "GoPay" / dll.        |
-| `detail`     | string      | Nomor rekening / nomor HP / "-"        |
-| `needsProof` | boolean     | Wajib upload bukti bayar atau tidak    |
+| Kolom | Tipe Data | Atribut | Keterangan |
+|---|---|---|---|
+| `id` | VARCHAR(50) | PRIMARY KEY | ID unik metode pembayaran (misal: `gopay`, `transfer_bca`) |
+| `label` | VARCHAR(100) | NOT NULL | Label pembayaran yang tampil (misal: "Transfer BCA") |
+| `detail` | TEXT | | Instruksi transfer (nomor rekening, nama pemilik rekening) |
+| `needs_proof` | BOOLEAN | DEFAULT FALSE | Apakah perlu mengunggah bukti bayar atau tidak |
 
 ---
 
 ## Relasi Antar Entity
 
 ```
-UserProfile ──── 1 : N ──── Order
-Order ──────────── 1 : 1 ──── Customization  (embedded)
-Order ──────────── N : 1 ──── PaymentMethod
-Order ──────────── N : 1 ──── Product         (snapshot embedded)
-Product ────────── 1 : N ──── SizeOption      (embedded)
-Product ────────── 1 : N ──── Addon           (embedded)
-Customization ──── N : 1 ──── SizeOption      (via sizeId)
-Customization ──── N : M ──── Addon           (via selectedAddonIds[])
+users ─────────── 1 : N ───────── orders
+orders ────────── 1 : 1 ───────── customization (embedded JSONB)
+orders ────────── N : 1 ───────── payment_methods
+orders ────────── N : 1 ───────── products        (snapshot embedded JSONB)
+products ──────── 1 : N ───────── SizeOption      (embedded JSONB)
+products ──────── 1 : N ───────── Addon           (embedded JSONB)
 ```
 
 ---
@@ -253,58 +206,28 @@ Customization ──── N : M ──── Addon           (via selectedAddon
 [Buat Pesanan]
       │
       ▼
-menunggu_konfirmasi   ←── Admin menerima pesanan & verifikasi pembayaran
+menunggu_konfirmasi   ←── Admin menerima pesanan & memverifikasi pembayaran
       │
       ▼
-  dalam_proses         ←── Florist sedang merangkai bouquet
+  dalam_proses         ←── Florist sedang merangkai bouquet pesanan
       │
       ▼
-  pesanan_siap         ←── Pesanan siap dikirim / diambil
+  pesanan_siap         ←── Bouquet selesai dirangkai & siap dikirim / diambil
       │
       ▼
-    selesai            ←── Pesanan diterima pelanggan
+    selesai            ←── Pesanan telah diterima dengan baik oleh pelanggan
 ```
 
 ---
 
-## Penyimpanan Data (Storage Layer)
+## Penyimpanan File (File Storage)
 
-### KV Store (`kv_store_205999f8`)
+Penyimpanan file bukti pembayaran (`payment_proof_path`) dan foto referensi bouquet kustom dari pelanggan (`referenceImagePath`) disimpan di **Disk Lokal Server** di bawah folder:
+* **`server/uploads/`**
 
-| Key Pattern               | Value       | Keterangan                     |
-|---------------------------|-------------|--------------------------------|
-| `product:{id}`            | Product     | Data produk                    |
-| `order:{id}`              | Order       | Data pesanan                   |
-| `user:{id}`               | UserProfile | Data profil user               |
-| `settings:payment_methods`| PaymentMethod[] | Konfigurasi metode bayar  |
+Nama file yang disimpan akan di-generate menggunakan format UUID demi menjaga keamanan nama file agar unik dan tidak saling menimpa:
+* Bukti Transfer: `proof-{userId}-{random-uuid}.{ext}`
+* Gambar Referensi: `reference-{userId}-{random-uuid}.{ext}`
 
-### File Storage (`make-205999f8-uploads`)
-
-| Path Pattern                       | Isi                          |
-|------------------------------------|------------------------------|
-| `reference/{userId}/{uuid}.{ext}`  | Foto referensi dari pelanggan|
-| `proof/{userId}/{uuid}.{ext}`      | Bukti transfer pembayaran    |
-
----
-
-## Diagram Relasi Supabase Auth ↔ Aplikasi
-
-```
-Supabase Auth (auth.users)
-         │
-         │ id (UUID) — one-to-one
-         ▼
-   UserProfile (kv_store)
-         │
-         │ userId — one-to-many
-         ▼
-      Order (kv_store)
-      ├── product (snapshot)
-      │       ├── sizes[]
-      │       └── addons[]
-      ├── customization (snapshot)
-      │       ├── sizeId → SizeOption
-      │       └── selectedAddonIds[] → Addon[]
-      ├── paymentMethod → PaymentMethod (kv_store)
-      └── paymentProofPath → Storage bucket
-```
+File-file tersebut dapat diakses oleh client / frontend menggunakan alamat url statis:
+* **`http://localhost:3001/uploads/{filename}`**

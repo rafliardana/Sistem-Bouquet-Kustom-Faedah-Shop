@@ -2,47 +2,45 @@
 
 ## Level 0 — System Context Diagram
 
-Menggambarkan sistem **Faedah Shop** sebagai satu kotak tunggal dan seluruh aktor eksternal yang berinteraksi dengannya.
+Menggambarkan sistem **Faedah Shop** sebagai satu kotak tunggal dan seluruh aktor eksternal yang berinteraksi dengannya setelah migrasi ke PostgreSQL lokal dan Express.js.
 
 ```
                          ┌─────────────────────────────────────────────────────────────────┐
                          │                                                                 │
-  ┌──────────────┐        │                      FAEDAH SHOP SYSTEM                        │        ┌──────────────┐
-  │              │        │                                                                 │        │              │
-  │  PELANGGAN   │◄──────►│  ┌───────────────────────────────────────────────────────┐    │◄──────►│    ADMIN     │
-  │  (Customer)  │        │  │              React Frontend (SPA)                     │    │        │              │
-  └──────────────┘        │  │  - Katalog produk          - Checkout                 │    │        └──────────────┘
+  ┌──────────────┐       │                      FAEDAH SHOP SYSTEM                        │        ┌──────────────┐
+  │              │       │                                                                 │        │              │
+  │  PELANGGAN   │◄─────►│  ┌───────────────────────────────────────────────────────┐    │◄──────►│    ADMIN     │
+  │  (Customer)  │       │  │              React Frontend (SPA)                     │    │        │              │
+  │  └──────────────┘       │  │  - Katalog produk          - Checkout                 │    │        └──────────────┘
                           │  │  - Kustomisasi bouquet     - Tracking pesanan         │    │
-  Aksi:                   │  │  - Login / Register        - Panel admin/owner        │    │        Aksi:
-  ─ Lihat katalog         │  └────────────────────┬──────────────────────────────────┘    │        ─ Login panel
-  ─ Kustomisasi produk    │                        │                                       │        ─ Kelola pesanan
-  ─ Pesan bouquet         │           ┌────────────▼──────────────┐                       │        ─ Update status
-  ─ Upload foto referensi │           │   Supabase Edge Function  │                       │        ─ Kelola produk
-  ─ Pilih metode bayar    │           │     (server/index.tsx)    │                       │        ─ Kelola metode bayar
-  ─ Upload bukti transfer │           │   REST API + Auth Guard   │                       │
-  ─ Cek status pesanan    │           └────────────┬──────────────┘                       │
-                          │                        │                                       │
-                          │          ┌─────────────┼──────────────┐                       │
-                          │          │             │              │                        │
-                          │   ┌──────▼──────┐ ┌───▼────────┐ ┌──▼────────────┐           │
-                          │   │  Supabase   │ │  Supabase  │ │   Supabase    │           │
-                          │   │    Auth     │ │  KV Store  │ │   Storage     │           │
-                          │   │  (auth.     │ │ (kv_store_ │ │  (make-       │           │
-                          │   │   users)    │ │  205999f8) │ │  205999f8-    │           │
-                          │   └─────────────┘ └────────────┘ │  uploads)     │           │
-                          │                                   └───────────────┘           │
-                          │                                                                 │
-                          └─────────────────────────────────────────────────────────────────┘
-                                                        │
-                                               ┌────────▼────────┐
-                                               │     OWNER       │
-                                               │                 │
-                                               └─────────────────┘
-                                               Aksi:
-                                               ─ Semua akses admin
-                                               ─ Dashboard statistik
-                                               ─ Kelola akun admin
-                                               ─ Lihat laporan penjualan
+  Aksi:                  │  │  - Login / Register        - Panel admin/owner        │    │        Aksi:
+  ─ Lihat katalog        │  └────────────────────┬──────────────────────────────────┘    │        ─ Login panel
+  ─ Kustomisasi produk   │                        │                                       │        ─ Kelola pesanan
+  ─ Pesan bouquet        │           ┌────────────▼──────────────┐                       │        ─ Update status
+  ─ Upload foto referensi│           │     Express.js Server     │                       │        ─ Kelola produk
+  ─ Pilih metode bayar   │           │    (server/server.js)     │                       │        ─ Kelola metode bayar
+  ─ Upload bukti transfer│           │   REST API + JWT Middleware   │                       │
+  ─ Cek status pesanan   │           └────────────┬──────────────┘                       │
+                         │                        │                                       │
+                         │          ┌─────────────┴─────────────┐                         │
+                         │          │                           │                         │
+                         │   ┌──────▼──────┐             ┌──────▼──────┐                  │
+                         │   │ PostgreSQL  │             │ Disk Lokal  │                  │
+                         │   │  Database   │             │  Uploads    │                  │
+                         │   │ (localhost) │             │ (/uploads)  │                  │
+                         │   └─────────────┘             └─────────────┘                  │
+                         │                                                                 │
+                         └─────────────────────────────────────────────────────────────────┘
+                                                       │
+                                              ┌────────▼────────┐
+                                              │     OWNER       │
+                                              │                 │
+                                              └─────────────────┘
+                                              Aksi:
+                                              ─ Semua akses admin
+                                              ─ Dashboard statistik
+                                              ─ Kelola akun admin
+                                              ─ Lihat laporan penjualan
 ```
 
 ---
@@ -54,7 +52,7 @@ Menggambarkan sistem **Faedah Shop** sebagai satu kotak tunggal dan seluruh akto
 | **Pelanggan** | Pengguna umum yang membeli bouquet                         | Lihat katalog, kustomisasi, pesan, bayar, tracking                       |
 | **Admin**     | Staff toko yang mengelola operasional                      | Login, kelola pesanan, kelola produk, kelola metode pembayaran            |
 | **Owner**     | Pemilik toko dengan akses penuh                            | Semua akses admin + statistik penjualan + kelola akun admin               |
-| **Supabase**  | Platform backend (Auth, Database, Storage, Edge Functions) | Menyimpan data, autentikasi, menjalankan server-side logic, hosting file  |
+| **Database & File** | Penyimpanan lokal (PostgreSQL + Disk) | Menyimpan data terstruktur di database relasional, menyimpan file gambar di folder lokal |
 
 ---
 
@@ -63,13 +61,13 @@ Menggambarkan sistem **Faedah Shop** sebagai satu kotak tunggal dan seluruh akto
 Menggambarkan aliran data utama antara aktor dan proses dalam sistem.
 
 ```
-PELANGGAN                    SISTEM FAEDAH SHOP                         SUPABASE
+PELANGGAN                    SISTEM FAEDAH SHOP                     BACKEND / DATABASE (LOCAL)
     │                                                                        │
-    │──── [1] Register / Login ─────────────────────────────────────────────►│ auth.users
-    │◄─── session token ────────────────────────────────────────────────────│
+    │──── [1] Register / Login ─────────────────────────────────────────────►│ users table (PostgreSQL)
+    │◄─── JWT token ────────────────────────────────────────────────────────│
     │                                                                        │
     │──── [2] Minta daftar produk ──────────►┌──────────────────┐           │
-    │                                        │  Proses: Tampil  │──────────►│ kv_store (product:*)
+    │                                        │  Proses: Tampil  │──────────►│ products table
     │◄─── daftar produk + foto ─────────────│  Katalog Produk  │◄──────────│
     │                                        └──────────────────┘           │
     │                                                                        │
@@ -79,61 +77,61 @@ PELANGGAN                    SISTEM FAEDAH SHOP                         SUPABASE
     │◄─── ringkasan pesanan + total harga ──│                  │           │
     │                                        └──────────────────┘           │
     │                                                                        │
-    │──── [4] Upload foto referensi ────────────────────────────────────────►│ Storage (reference/)
-    │◄─── signed URL preview ───────────────────────────────────────────────│
+    │──── [4] Upload foto referensi ────────────────────────────────────────►│ Disk Lokal (uploads/)
+    │◄─── URL file lokal ───────────────────────────────────────────────────│
     │                                                                        │
     │──── [5] Isi form checkout ────────────►┌──────────────────┐           │
-    │    (nama, HP, alamat, metode bayar)    │  Proses: Buat    │──────────►│ kv_store (order:*)
+    │    (nama, HP, alamat, metode bayar)    │  Proses: Buat    │──────────►│ orders table (PostgreSQL)
     │◄─── nomor pesanan (FLR-XXXXXX) ───────│  Pesanan Baru    │◄──────────│
     │                                        └──────────────────┘           │
     │                                                                        │
-    │──── [6] Upload bukti transfer ────────────────────────────────────────►│ Storage (proof/)
+    │──── [6] Upload bukti transfer ────────────────────────────────────────►│ Disk Lokal (uploads/)
     │◄─── konfirmasi upload ────────────────────────────────────────────────│
     │                                                                        │
     │──── [7] Cek status pesanan ───────────►┌──────────────────┐           │
-    │    (cari by nomor pesanan / login)     │  Proses: Tracking│──────────►│ kv_store (order:*)
+    │    (cari by nomor pesanan / login)     │  Proses: Tracking│──────────►│ orders table (PostgreSQL)
     │◄─── status + detail pesanan ──────────│  Pesanan         │◄──────────│
     │                                        └──────────────────┘           │
 
 
-ADMIN / OWNER                SISTEM FAEDAH SHOP                         SUPABASE
+ADMIN / OWNER                SISTEM FAEDAH SHOP                     BACKEND / DATABASE (LOCAL)
     │                                                                        │
     │──── [8] Login panel admin ────────────►┌──────────────────┐           │
-    │    (/admin/login)                      │  Proses: Auth    │──────────►│ auth.users
-    │◄─── session + role check ─────────────│  & Role Guard    │◄──────────│
+    │    (/admin/login)                      │  Proses: Auth    │──────────►│ users table (PostgreSQL)
+    │◄─── JWT + role check ─────────────────│  & Role Guard    │◄──────────│
     │                                        └──────────────────┘           │
     │                                                                        │
     │──── [9] Lihat semua pesanan ──────────►┌──────────────────┐           │
-    │                                        │  Proses: Daftar  │──────────►│ kv_store (order:*)
+    │                                        │  Proses: Daftar  │──────────►│ orders table (PostgreSQL)
     │◄─── list pesanan + detail ────────────│  & Filter Pesanan│◄──────────│
     │                                        └──────────────────┘           │
     │                                                                        │
     │──── [10] Update status pesanan ───────►┌──────────────────┐           │
-    │    (konfirmasi → proses → siap →       │  Proses: Update  │──────────►│ kv_store (order:*)
+    │    (konfirmasi → proses → siap →       │  Proses: Update  │──────────►│ orders table (PostgreSQL)
     │     selesai)                           │  Status          │◄──────────│
     │◄─── status berhasil diperbarui ───────│                  │           │
     │                                        └──────────────────┘           │
     │                                                                        │
     │──── [11] Kelola produk ───────────────►┌──────────────────┐           │
-    │    (tambah/edit/hapus produk,          │  Proses: CRUD    │──────────►│ kv_store (product:*)
+    │    (tambah/edit/hapus produk,          │  Proses: CRUD    │──────────►│ products table (PostgreSQL)
     │     ubah ukuran & addon)              │  Produk          │◄──────────│
     │◄─── konfirmasi perubahan ─────────────│                  │           │
     │                                        └──────────────────┘           │
     │                                                                        │
     │──── [12] Kelola metode pembayaran ────►┌──────────────────┐           │
-    │    (tambah/edit/hapus)                 │  Proses: CRUD    │──────────►│ kv_store (settings:*)
+    │    (tambah/edit/hapus)                 │  Proses: CRUD    │──────────►│ payment_methods table (PG)
     │◄─── daftar metode terbaru ────────────│  Pembayaran      │◄──────────│
     │                                        └──────────────────┘           │
     │                                                                        │
     │  [OWNER ONLY]                                                          │
     │──── [13] Lihat dashboard statistik ───►┌──────────────────┐           │
-    │                                        │  Proses: Agregat │──────────►│ kv_store (order:*)
+    │                                        │  Proses: Agregat │──────────►│ orders table (PostgreSQL)
     │◄─── grafik revenue, top produk, ──────│  & Hitung Stats  │◄──────────│
     │      jumlah pesanan per status         └──────────────────┘           │
     │                                                                        │
     │──── [14] Kelola akun admin ───────────►┌──────────────────┐           │
-    │    (tambah/nonaktifkan admin)          │  Proses: Kelola  │──────────►│ auth.users
-    │◄─── list akun admin/owner ────────────│  Akun            │◄──────────│ kv_store (user:*)
+    │    (tambah/nonaktifkan admin)          │  Proses: Kelola  │──────────►│ users table (PostgreSQL)
+    │◄─── list akun admin/owner ────────────│  Akun            │◄──────────│
     │                                        └──────────────────┘           │
 ```
 
@@ -145,34 +143,34 @@ ADMIN / OWNER                SISTEM FAEDAH SHOP                         SUPABASE
 
 | No  | Aliran Data            | Dari         | Ke                  | Isi                                              |
 |-----|------------------------|--------------|---------------------|--------------------------------------------------|
-| D1  | Kredensial login       | Pelanggan    | Auth                | email, password                                  |
-| D2  | Request katalog        | Pelanggan    | KV Store            | —                                                |
+| D1  | Kredensial login       | Pelanggan    | Auth (Express API)  | email, password                                  |
+| D2  | Request katalog        | Pelanggan    | Database            | —                                                |
 | D3  | Pilihan kustomisasi    | Pelanggan    | Frontend (state)    | productId, sizeId, addonIds, deskripsi           |
-| D4  | Foto referensi         | Pelanggan    | Storage             | file gambar (jpg/png/webp, maks 5MB)             |
-| D5  | Data checkout          | Pelanggan    | KV Store            | nama, HP, alamat, paymentMethod                  |
-| D6  | Bukti pembayaran       | Pelanggan    | Storage             | file gambar bukti transfer                       |
-| D7  | Nomor/ID pesanan       | Pelanggan    | KV Store            | orderNumber atau userId                          |
+| D4  | Foto referensi         | Pelanggan    | Disk Lokal          | file gambar (base64 via Express API)             |
+| D5  | Data checkout          | Pelanggan    | Database            | nama, HP, alamat, paymentMethod                  |
+| D6  | Bukti pembayaran       | Pelanggan    | Disk Lokal          | file gambar bukti transfer                       |
+| D7  | Nomor/ID pesanan       | Pelanggan    | Database            | orderNumber atau userId                          |
 
 ### Sistem → Pelanggan
 
 | No  | Aliran Data            | Dari         | Ke                  | Isi                                              |
 |-----|------------------------|--------------|---------------------|--------------------------------------------------|
-| D8  | Session token          | Auth         | Pelanggan           | JWT session                                      |
-| D9  | Daftar produk          | KV Store     | Pelanggan           | array Product (nama, foto, harga, ukuran, addon) |
+| D8  | JWT Token              | Auth         | Pelanggan           | JWT session token di localStorage                |
+| D9  | Daftar produk          | Database     | Pelanggan           | array Product (nama, foto, harga, ukuran, addon) |
 | D10 | Total harga            | Frontend     | Pelanggan           | basePrice × multiplier + Σ addon.price           |
-| D11 | Nomor pesanan          | KV Store     | Pelanggan           | `FLR-XXXXXX`                                     |
-| D12 | Status pesanan         | KV Store     | Pelanggan           | status + timestamp + detail                      |
-| D13 | Preview foto           | Storage      | Pelanggan           | signed URL (temporary)                           |
+| D11 | Nomor pesanan          | Database     | Pelanggan           | `FLR-XXXXXX`                                     |
+| D12 | Status pesanan         | Database     | Pelanggan           | status + timestamp + detail                      |
+| D13 | Preview foto           | Disk Lokal   | Pelanggan           | URL statis localhost (`/uploads/filename.ext`)   |
 
 ### Admin/Owner → Sistem
 
 | No  | Aliran Data            | Dari         | Ke                  | Isi                                              |
 |-----|------------------------|--------------|---------------------|--------------------------------------------------|
-| D14 | Kredensial admin       | Admin/Owner  | Auth                | email, password (role: admin/owner)              |
-| D15 | Update status pesanan  | Admin        | KV Store            | orderId, status baru                             |
-| D16 | Data produk baru/edit  | Admin        | KV Store            | Product object lengkap                           |
-| D17 | Konfigurasi pembayaran | Admin        | KV Store            | PaymentMethod array                              |
-| D18 | Data akun admin baru   | Owner        | Auth + KV Store     | email, password, name, role                      |
+| D14 | Kredensial admin       | Admin/Owner  | Auth (Express API)  | email, password (role: admin/owner)              |
+| D15 | Update status pesanan  | Admin        | Database            | orderId, status baru                             |
+| D16 | Data produk baru/edit  | Admin        | Database            | Product object lengkap                           |
+| D17 | Konfigurasi pembayaran | Admin        | Database            | PaymentMethod array                              |
+| D18 | Data akun admin baru   | Owner        | Database            | email, password, name, role                      |
 
 ---
 
@@ -183,15 +181,15 @@ ADMIN / OWNER                SISTEM FAEDAH SHOP                         SUPABASE
 ║                        FAEDAH SHOP SYSTEM                            ║
 ║                                                                       ║
 ║  ┌─────────────────────┐    ┌──────────────────────────────────────┐ ║
-║  │   React Frontend    │    │      Supabase Backend                │ ║
-║  │   (Client-side)     │    │      (Server-side)                   │ ║
+║  │   React Frontend    │    │      Express.js + PostgreSQL         │ ║
+║  │   (Client-side)     │    │      (Server-side Lokal)             │ ║
 ║  │                     │    │                                      │ ║
-║  │  - Routing          │◄──►│  - Edge Function (REST API)          │ ║
-║  │  - State management │    │  - Auth (JWT, RLS)                   │ ║
-║  │  - UI components    │    │  - KV Store (PostgreSQL)             │ ║
-║  │  - Form validation  │    │  - Storage (S3-compatible)           │ ║
-║  │  - Price calculator │    │  - Role-based access control         │ ║
-║  └─────────────────────┘    └──────────────────────────────────────┘ ║
+║  │  - Routing          │◄──►│  - Node.js REST API (server.js)      │ ║
+║  │  - State management │    │  - JWT + bcrypt (Lokal Auth)         │ ║
+║  │  - UI components    │    │  - PostgreSQL Database               │ ║
+║  │  - Form validation  │    │  - Disk Lokal File Storage           │ ║
+║  │  - Price calculator │    │  - Middleware Autentikasi            │ ║
+║  │  └─────────────────────┘    └──────────────────────────────────────┘ ║
 ║                                                                       ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 
