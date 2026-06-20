@@ -2,6 +2,10 @@
 
 Sistem e-commerce dan kustomisasi bouquet bunga berbasis web yang modern, interaktif, dan responsif. Aplikasi ini dirancang khusus untuk mempermudah pelanggan dalam memilih, mengkustomisasi ukuran & tambahan (addons) bouquet, serta mempermudah pemilik toko (**Faedah Shop**) dalam manajemen stok, pesanan, dan laporan penjualan secara lokal.
 
+<img width="1536" height="1024" alt="ChatGPT Image 21 Jun 2026, 01 32 35" src="https://github.com/user-attachments/assets/a63c9fd7-95a1-487f-b8ef-a6f5a23382c8" />
+
+<img width="962" height="1167" alt="diagram-export-21-6-2026-00 43 57" src="https://github.com/user-attachments/assets/78fc9503-0bb2-4476-a26a-a0cba09913c0" />
+
 ---
 
 ## 🚀 Fitur Utama
