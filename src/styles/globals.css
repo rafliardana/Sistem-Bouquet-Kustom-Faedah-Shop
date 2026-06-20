@@ -1,0 +1,84 @@
+/* ── Astra UI Design System CSS Variables ── */
+:root {
+  /* Brand */
+  --brand-primary: #5250f3;
+  --brand-hover: #4240d4;
+  --brand-dark: #3230b5;
+  --brand-secondary: #d4d4fc;
+  --brand-tertiary: #eaeaff;
+  --brand-muted: #f0f0ff;
+
+  /* Surface */
+  --surface-bg: #ffffff;
+  --surface-secondary-bg: #f5f5f8;
+  --surface-hover: #f8f8fb;
+  --surface-dark: #22222c;
+
+  /* Text */
+  --text-primary: rgba(0, 0, 0, 0.85);
+  --text-secondary: rgba(0, 0, 0, 0.55);
+  --text-tertiary: rgba(0, 0, 0, 0.35);
+
+  /* Border */
+  --border-primary: rgba(0, 0, 0, 0.1);
+  --border-secondary: rgba(0, 0, 0, 0.06);
+  --border-selected: #5250f3;
+
+  /* Background tints */
+  --bg-faint: rgba(0, 0, 0, 0.03);
+  --bg-subtle: rgba(0, 0, 0, 0.06);
+  --bg-hover: rgba(0, 0, 0, 0.04);
+
+  /* On-color text */
+  --on-brand: #ffffff;
+  --on-reverse: #1e1e1e;
+
+  /* Status */
+  --status-success: #16a34a;
+  --status-success-bg: #dcfce7;
+  --status-warning: #d97706;
+  --status-warning-bg: #fef3c7;
+  --status-danger: #dc2626;
+  --status-danger-bg: #fee2e2;
+
+  /* Special */
+  --input-bg: #f5f5f8;
+}
+
+/* ── Composite Typography Classes ── */
+.text-title {
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.text-heading {
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.text-label {
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.text-label-sm {
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.text-input {
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.text-video-title {
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: normal;
+}
