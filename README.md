@@ -1,7 +1,7 @@
 
   # Sistem Bouquet Kustom
 
-  This is a code bundle for Sistem Bouquet Kustom. The original project is available at https://www.figma.com/design/7pNgkcLgVL5TVptxegug4v/Sistem-Bouquet-Kustom.
+  This is a code bundle for Sistem Bouquet Kustom. The original project is available at [https://www.figma.com/design/7pNgkcLgVL5TVptxegug4v/Sistem-Bouquet-Kustom.](https://faedahshop.figma.site)
 
   ## Running the code
 
