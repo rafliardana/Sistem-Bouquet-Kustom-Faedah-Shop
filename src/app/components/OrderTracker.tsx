@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
 import { Clock, Package, CheckCircle, Star, ChevronDown, ChevronUp, MapPin, Phone, User, CreditCard, FlaskConical } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import type { Order, OrderStatus } from "./types";
 
 const STATUS_STEPS: { id: OrderStatus; label: string; description: string; icon: React.ReactNode }[] = [
@@ -34,7 +35,10 @@ function OrderCard({ order, isNew, onAdvanceStatus }: { order: Order; isNew?: bo
   const selectedSize = order.product.sizes.find((s) => s.id === order.customization.sizeId);
 
   return (
-    <div className={`bg-surface-bg rounded-corner-lg overflow-hidden ${isNew ? 'border-2 border-brand-primary' : ''}`}>
+    <motion.div 
+      layout
+      className={`bg-surface-bg rounded-corner-lg overflow-hidden shadow-sm border border-border-secondary ${isNew ? 'border-2 border-brand-primary' : ''}`}
+    >
       {isNew && (
         <div className="bg-brand-primary px-4 py-1.5 text-center">
           <p className="text-label-sm text-on-brand">🎉 Pesanan berhasil dibuat! Tim kami akan segera menghubungimu.</p>
@@ -57,136 +61,166 @@ function OrderCard({ order, isNew, onAdvanceStatus }: { order: Order; isNew?: bo
             <p className="text-label-sm font-semibold text-brand-primary">Rp {order.totalPrice.toLocaleString('id-ID')}</p>
           </div>
         </div>
-        <button onClick={() => setExpanded(!expanded)} className="text-text-tertiary hover:text-text-secondary transition-colors flex-shrink-0">
+        <button onClick={() => setExpanded(!expanded)} className="text-text-tertiary hover:text-text-secondary transition-colors flex-shrink-0 p-1 cursor-pointer">
           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
       </div>
 
-      {expanded && (
-        <div className="border-t border-border-secondary px-4 pb-4 flex flex-col gap-4">
-          {/* Timeline */}
-          <div className="pt-4">
-            <p className="text-label-sm font-semibold text-text-primary mb-3">Status Pesanan</p>
-            <div className="relative pl-8">
-              <div className="absolute left-3 top-2 bottom-2 w-px bg-border-primary" />
-              <div
-                className="absolute left-3 top-2 w-px bg-brand-primary transition-all duration-700"
-                style={{ height: currentIndex === 0 ? '0%' : `${(currentIndex / (STATUS_STEPS.length - 1)) * 100}%` }}
-              />
-              <div className="flex flex-col gap-3">
-                {STATUS_STEPS.map((step, i) => {
-                  const isDone = i <= currentIndex;
-                  const isCurrent = i === currentIndex;
-                  return (
-                    <div key={step.id} className="flex items-start gap-2 relative">
-                      <div
-                        className="w-6 h-6 rounded-corner-full flex items-center justify-center flex-shrink-0 absolute -left-8 transition-all"
-                        style={{
-                          background: isDone ? 'var(--brand-primary)' : 'var(--bg-faint)',
-                          color: isDone ? 'var(--on-brand)' : 'var(--text-tertiary)',
-                          outline: isCurrent ? '3px solid var(--brand-muted)' : 'none',
-                        }}
-                      >
-                        {step.icon}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ type: "spring", stiffness: 100, damping: 16 }}
+            className="border-t border-border-secondary px-4 pb-4 flex flex-col gap-4 overflow-hidden"
+          >
+            {/* Timeline */}
+            <div className="pt-4">
+              <p className="text-label-sm font-semibold text-text-primary mb-3">Status Pesanan</p>
+              <div className="relative pl-8">
+                {/* Background timeline line */}
+                <div className="absolute left-3 top-2 bottom-2 w-px bg-border-primary" />
+                
+                {/* Animated progress timeline line */}
+                <motion.div
+                  className="absolute left-3 top-2 w-px bg-brand-primary"
+                  initial={{ height: "0%" }}
+                  animate={{ height: currentIndex === 0 ? "0%" : `${(currentIndex / (STATUS_STEPS.length - 1)) * 100}%` }}
+                  transition={{ duration: 0.8, ease: "easeInOut" }}
+                />
+                
+                <div className="flex flex-col gap-3">
+                  {STATUS_STEPS.map((step, i) => {
+                    const isDone = i <= currentIndex;
+                    const isCurrent = i === currentIndex;
+                    return (
+                      <div key={step.id} className="flex items-start gap-2 relative">
+                        <motion.div
+                          className="w-6 h-6 rounded-corner-full flex items-center justify-center flex-shrink-0 absolute -left-8 transition-colors duration-300"
+                          initial={{ scale: 0.8 }}
+                          animate={{
+                            scale: isCurrent ? [1, 1.15, 1] : 1,
+                            backgroundColor: isDone ? 'var(--brand-primary)' : 'var(--bg-faint)',
+                            color: isDone ? 'var(--on-brand)' : 'var(--text-tertiary)',
+                            boxShadow: isCurrent ? '0 0 0 3px var(--brand-muted)' : 'none',
+                          }}
+                          transition={{
+                            scale: isCurrent ? { repeat: Infinity, duration: 2.5, ease: "easeInOut" } : { duration: 0.3 }
+                          }}
+                        >
+                          {step.icon}
+                        </motion.div>
+                        <div>
+                          <p className={`text-label-sm ${isCurrent ? 'font-semibold text-text-primary' : isDone ? 'text-text-secondary' : 'text-text-tertiary'}`}>
+                            {step.label}
+                          </p>
+                          <AnimatePresence>
+                            {isCurrent && (
+                              <motion.p 
+                                initial={{ opacity: 0, y: -2 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0 }}
+                                className="text-video-title text-text-tertiary mt-1"
+                              >
+                                {step.description}
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
-                      <div>
-                        <p className={`text-label-sm ${isCurrent ? 'font-semibold text-text-primary' : isDone ? 'text-text-secondary' : 'text-text-tertiary'}`}>
-                          {step.label}
-                        </p>
-                        {isCurrent && <p className="text-video-title text-text-tertiary mt-1">{step.description}</p>}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Details */}
-          <div className="bg-bg-faint rounded-corner-md p-3 flex flex-col gap-3">
-            <p className="text-label-sm font-semibold text-text-primary">Detail Pesanan</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { icon: <User className="w-4 h-4" />, label: 'Pemesan', value: order.customerName },
-                { icon: <Phone className="w-4 h-4" />, label: 'WhatsApp', value: order.customerPhone },
-              ].map((row) => (
-                <div key={row.label} className="flex items-start gap-1.5">
-                  <span className="text-text-tertiary mt-1 flex-shrink-0">{row.icon}</span>
-                  <div>
-                    <p className="text-video-title text-text-tertiary">{row.label}</p>
-                    <p className="text-label-sm text-text-primary">{row.value}</p>
+            {/* Details */}
+            <div className="bg-bg-faint rounded-corner-md p-3 flex flex-col gap-3 border border-border-secondary/40">
+              <p className="text-label-sm font-semibold text-text-primary">Detail Pesanan</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { icon: <User className="w-4 h-4" />, label: 'Pemesan', value: order.customerName },
+                  { icon: <Phone className="w-4 h-4" />, label: 'WhatsApp', value: order.customerPhone },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-start gap-1.5">
+                    <span className="text-text-tertiary mt-1 flex-shrink-0">{row.icon}</span>
+                    <div>
+                      <p className="text-video-title text-text-tertiary">{row.label}</p>
+                      <p className="text-label-sm text-text-primary">{row.value}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              <div className="flex items-start gap-1.5 sm:col-span-2">
-                <MapPin className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-video-title text-text-tertiary">Alamat Pengiriman</p>
-                  <p className="text-label-sm text-text-primary">{order.customerAddress}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-1.5">
-                <Package className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-video-title text-text-tertiary">Ukuran</p>
-                  <p className="text-label-sm text-text-primary">{selectedSize?.label} — {selectedSize?.stems}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-1.5">
-                <CreditCard className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-video-title text-text-tertiary">Pembayaran</p>
-                  <p className="text-label-sm text-text-primary">{order.paymentMethodLabel ?? PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</p>
-                </div>
-              </div>
-              {order.customization.selectedAddonIds.length > 0 && (
+                ))}
                 <div className="flex items-start gap-1.5 sm:col-span-2">
-                  <Star className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
+                  <MapPin className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
                   <div>
-                    <p className="text-video-title text-text-tertiary">Tambahan</p>
-                    <p className="text-label-sm text-text-primary">
-                      {order.customization.selectedAddonIds.map((id) => order.product.addons.find((a) => a.id === id)?.label).filter(Boolean).join(', ')}
-                    </p>
+                    <p className="text-video-title text-text-tertiary">Alamat Pengiriman</p>
+                    <p className="text-label-sm text-text-primary">{order.customerAddress}</p>
                   </div>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <Package className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="text-video-title text-text-tertiary">Ukuran</p>
+                    <p className="text-label-sm text-text-primary">{selectedSize?.label} — {selectedSize?.stems}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <CreditCard className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="text-video-title text-text-tertiary">Pembayaran</p>
+                    <p className="text-label-sm text-text-primary">{order.paymentMethodLabel ?? PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</p>
+                  </div>
+                </div>
+                {order.customization.selectedAddonIds.length > 0 && (
+                  <div className="flex items-start gap-1.5 sm:col-span-2">
+                    <Star className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-video-title text-text-tertiary">Tambahan</p>
+                      <p className="text-label-sm text-text-primary">
+                        {order.customization.selectedAddonIds.map((id) => order.product.addons.find((a) => a.id === id)?.label).filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {order.customization.description && (
+                <div className="border-t border-border-secondary pt-3">
+                  <p className="text-video-title text-text-tertiary mb-1">Permintaan Khusus</p>
+                  <p className="text-label-sm text-text-primary whitespace-pre-wrap leading-tight">{order.customization.description}</p>
+                </div>
+              )}
+              {(order.customization.referenceImagePreview || order.paymentProofPreview) && (
+                <div className="flex gap-2 flex-wrap border-t border-border-secondary pt-3">
+                  {order.customization.referenceImagePreview && (
+                    <div>
+                      <p className="text-video-title text-text-tertiary mb-1">Referensi</p>
+                      <div className="rounded-corner-md overflow-hidden shadow-sm" style={{ width: '72px', height: '72px' }}>
+                        <img src={order.customization.referenceImagePreview} alt="Referensi" className="w-full h-full object-cover" />
+                      </div>
+                    </div>
+                  )}
+                  {order.paymentProofPreview && (
+                    <div>
+                      <p className="text-video-title text-text-tertiary mb-1">Bukti Bayar</p>
+                      <div className="rounded-corner-md overflow-hidden shadow-sm" style={{ width: '72px', height: '72px' }}>
+                        <img src={order.paymentProofPreview} alt="Bukti bayar" className="w-full h-full object-cover" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            {order.customization.description && (
-              <div className="border-t border-border-secondary pt-3">
-                <p className="text-video-title text-text-tertiary mb-1">Permintaan Khusus</p>
-                <p className="text-label-sm text-text-primary">{order.customization.description}</p>
-              </div>
-            )}
-            {(order.customization.referenceImagePreview || order.paymentProofPreview) && (
-              <div className="flex gap-2 flex-wrap border-t border-border-secondary pt-3">
-                {order.customization.referenceImagePreview && (
-                  <div>
-                    <p className="text-video-title text-text-tertiary mb-1">Referensi</p>
-                    <div className="rounded-corner-md overflow-hidden" style={{ width: '72px', height: '72px' }}>
-                      <img src={order.customization.referenceImagePreview} alt="Referensi" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                )}
-                {order.paymentProofPreview && (
-                  <div>
-                    <p className="text-video-title text-text-tertiary mb-1">Bukti Bayar</p>
-                    <div className="rounded-corner-md overflow-hidden" style={{ width: '72px', height: '72px' }}>
-                      <img src={order.paymentProofPreview} alt="Bukti bayar" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
-          {order.status !== 'selesai' && onAdvanceStatus && (
-            <Button variant="subtle" size="small" iconStart={<FlaskConical size={14} />} onClick={() => onAdvanceStatus(order.id)}>
-              [Demo] Simulasi Perubahan Status
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+            {order.status !== 'selesai' && onAdvanceStatus && (
+              <Button variant="subtle" size="small" iconStart={<FlaskConical size={14} />} onClick={() => onAdvanceStatus(order.id)}>
+                [Demo] Simulasi Perubahan Status
+              </Button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

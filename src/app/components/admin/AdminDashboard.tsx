@@ -7,6 +7,7 @@ import { Loading } from "../../pages/Loading";
 import { useAuth } from "../../lib/auth";
 import { getStats } from "../../lib/api";
 import { ShoppingBag, Wallet, CheckCircle2, Clock } from "lucide-react";
+import { motion } from "motion/react";
 import type { SalesStats, OrderStatus } from "../types";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -16,9 +17,15 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   selesai: "Selesai",
 };
 
-function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent?: boolean }) {
+function StatCard({ icon, label, value, accent, idx }: { icon: React.ReactNode; label: string; value: string; accent?: boolean; idx: number }) {
   return (
-    <div className="bg-surface-bg rounded-corner-lg border border-border-primary p-4 flex items-center gap-3">
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 100, damping: 15, delay: idx * 0.05 }}
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className="bg-surface-bg rounded-corner-lg border border-border-primary p-4 flex items-center gap-3 shadow-sm"
+    >
       <div className={`w-11 h-11 rounded-corner-md flex items-center justify-center flex-shrink-0 ${accent ? "bg-brand-primary text-on-brand" : "bg-bg-faint text-text-secondary"}`}>
         {icon}
       </div>
@@ -26,16 +33,21 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
         <p className="text-video-title text-text-tertiary">{label}</p>
         <p className="text-heading text-text-primary truncate">{value}</p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, children, delay = 0.2 }: { title: string; children: React.ReactNode; delay?: number }) {
   return (
-    <div className="bg-surface-bg rounded-corner-lg border border-border-primary p-4">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+      className="bg-surface-bg rounded-corner-lg border border-border-primary p-4 shadow-sm"
+    >
       <h3 className="text-label font-semibold text-text-primary mb-3">{title}</h3>
       {children}
-    </div>
+    </motion.div>
   );
 }
 
@@ -87,21 +99,24 @@ export function AdminDashboard() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto flex flex-col gap-4">
-      <div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
         <h1 className="text-title text-text-primary">Dashboard</h1>
         <p className="text-label-sm text-text-secondary mt-1">Ringkasan penjualan Faedah Shop</p>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<ShoppingBag size={20} />} label="Total Pesanan" value={String(stats.totalOrders)} accent />
-        <StatCard icon={<Wallet size={20} />} label="Total Pendapatan" value={`Rp ${stats.totalRevenue.toLocaleString("id-ID")}`} />
-        <StatCard icon={<CheckCircle2 size={20} />} label="Selesai" value={String(stats.statusCounts.selesai ?? 0)} />
-        <StatCard icon={<Clock size={20} />} label="Menunggu Konfirmasi" value={String(stats.statusCounts.menunggu_konfirmasi ?? 0)} />
+        <StatCard icon={<ShoppingBag size={20} />} label="Total Pesanan" value={String(stats.totalOrders)} accent idx={0} />
+        <StatCard icon={<Wallet size={20} />} label="Total Pendapatan" value={`Rp ${stats.totalRevenue.toLocaleString("id-ID")}`} idx={1} />
+        <StatCard icon={<CheckCircle2 size={20} />} label="Selesai" value={String(stats.statusCounts.selesai ?? 0)} idx={2} />
+        <StatCard icon={<Clock size={20} />} label="Menunggu Konfirmasi" value={String(stats.statusCounts.menunggu_konfirmasi ?? 0)} idx={3} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="lg:col-span-2">
-          <ChartCard title="Pendapatan Harian">
+          <ChartCard title="Pendapatan Harian" delay={0.25}>
             {revenueData.length === 0 ? (
               <p className="text-label-sm text-text-tertiary py-12 text-center">Belum ada data pendapatan.</p>
             ) : (
@@ -127,7 +142,7 @@ export function AdminDashboard() {
           </ChartCard>
         </div>
 
-        <ChartCard title="Status Pesanan">
+        <ChartCard title="Status Pesanan" delay={0.3}>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={statusData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-secondary)" vertical={false} />
@@ -147,7 +162,7 @@ export function AdminDashboard() {
         </ChartCard>
       </div>
 
-      <ChartCard title="Produk Terlaris">
+      <ChartCard title="Produk Terlaris" delay={0.35}>
         {stats.topProducts.length === 0 ? (
           <p className="text-label-sm text-text-tertiary py-6 text-center">Belum ada penjualan.</p>
         ) : (
@@ -159,7 +174,12 @@ export function AdminDashboard() {
                   <span className="text-label-sm text-text-tertiary w-5 flex-shrink-0">{i + 1}</span>
                   <span className="text-label-sm text-text-primary w-40 flex-shrink-0 truncate">{p.name}</span>
                   <div className="flex-1 h-2.5 bg-bg-faint rounded-corner-full overflow-hidden">
-                    <div className="h-full bg-brand-primary rounded-corner-full" style={{ width: `${(p.count / max) * 100}%` }} />
+                    <motion.div 
+                      className="h-full bg-brand-primary rounded-corner-full" 
+                      initial={{ width: "0%" }}
+                      animate={{ width: `${(p.count / max) * 100}%` }}
+                      transition={{ duration: 1, ease: "easeOut", delay: i * 0.1 }}
+                    />
                   </div>
                   <span className="text-label-sm font-semibold text-text-secondary w-8 text-right flex-shrink-0">{p.count}</span>
                 </div>
@@ -171,3 +191,4 @@ export function AdminDashboard() {
     </div>
   );
 }
+

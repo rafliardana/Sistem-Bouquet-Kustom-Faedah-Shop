@@ -4,9 +4,14 @@ import { Header } from "../components/Header";
 // Customer-facing storefront layout (header + page outlet).
 export function CustomerLayout() {
   return (
-    <div className="font-sans">
+    <div className="font-sans min-h-screen bg-brand-tertiary">
       <Header />
       <Outlet />
     </div>
   );
 }
+
+
+
+
+

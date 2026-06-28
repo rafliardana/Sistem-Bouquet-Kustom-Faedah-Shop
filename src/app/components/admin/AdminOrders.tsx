@@ -6,6 +6,7 @@ import { listOrders, updateOrderStatus } from "../../lib/api";
 import {
   ChevronDown, ChevronUp, MapPin, Phone, User, CreditCard, Mail, ArrowRight, Check,
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import type { Order, OrderStatus } from "../types";
 
 const STATUS_FLOW: OrderStatus[] = ["menunggu_konfirmasi", "dalam_proses", "pesanan_siap", "selesai"];
@@ -43,7 +44,10 @@ function OrderRow({ order, onChange }: { order: Order; onChange: (o: Order) => v
   };
 
   return (
-    <div className="bg-surface-bg rounded-corner-lg border border-border-primary overflow-hidden">
+    <motion.div 
+      layout
+      className="bg-surface-bg rounded-corner-lg border border-border-primary overflow-hidden shadow-sm"
+    >
       <div className="p-4 flex items-start justify-between gap-2">
         <div className="flex gap-3 min-w-0">
           <div className="rounded-corner-md overflow-hidden flex-shrink-0" style={{ width: "56px", height: "56px" }}>
@@ -61,99 +65,107 @@ function OrderRow({ order, onChange }: { order: Order; onChange: (o: Order) => v
             <p className="text-label-sm font-semibold text-brand-primary">Rp {order.totalPrice.toLocaleString("id-ID")}</p>
           </div>
         </div>
-        <button onClick={() => setExpanded(!expanded)} className="text-text-tertiary hover:text-text-secondary transition-colors flex-shrink-0">
+        <button onClick={() => setExpanded(!expanded)} className="text-text-tertiary hover:text-text-secondary transition-colors flex-shrink-0 p-1 cursor-pointer">
           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
       </div>
 
-      {expanded && (
-        <div className="border-t border-border-secondary px-4 pb-4 pt-4 flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[
-              { icon: <User className="w-4 h-4" />, label: "Pemesan", value: order.customerName },
-              { icon: <Mail className="w-4 h-4" />, label: "Email", value: order.customerEmail },
-              { icon: <Phone className="w-4 h-4" />, label: "WhatsApp", value: order.customerPhone },
-              { icon: <CreditCard className="w-4 h-4" />, label: "Pembayaran", value: order.paymentMethodLabel ?? PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod },
-            ].map((row) => (
-              <div key={row.label} className="flex items-start gap-1.5">
-                <span className="text-text-tertiary mt-1 flex-shrink-0">{row.icon}</span>
-                <div className="min-w-0">
-                  <p className="text-video-title text-text-tertiary">{row.label}</p>
-                  <p className="text-label-sm text-text-primary break-words">{row.value}</p>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ type: "spring", stiffness: 100, damping: 16 }}
+            className="border-t border-border-secondary px-4 pb-4 pt-4 flex flex-col gap-4 overflow-hidden"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { icon: <User className="w-4 h-4" />, label: "Pemesan", value: order.customerName },
+                { icon: <Mail className="w-4 h-4" />, label: "Email", value: order.customerEmail },
+                { icon: <Phone className="w-4 h-4" />, label: "WhatsApp", value: order.customerPhone },
+                { icon: <CreditCard className="w-4 h-4" />, label: "Pembayaran", value: order.paymentMethodLabel ?? PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod },
+              ].map((row) => (
+                <div key={row.label} className="flex items-start gap-1.5">
+                  <span className="text-text-tertiary mt-1 flex-shrink-0">{row.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-video-title text-text-tertiary">{row.label}</p>
+                    <p className="text-label-sm text-text-primary break-words">{row.value}</p>
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-start gap-1.5 sm:col-span-2">
+                <MapPin className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
+                <div>
+                  <p className="text-video-title text-text-tertiary">Alamat</p>
+                  <p className="text-label-sm text-text-primary">{order.customerAddress}</p>
                 </div>
               </div>
-            ))}
-            <div className="flex items-start gap-1.5 sm:col-span-2">
-              <MapPin className="w-4 h-4 text-text-tertiary mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-video-title text-text-tertiary">Alamat</p>
-                <p className="text-label-sm text-text-primary">{order.customerAddress}</p>
-              </div>
             </div>
-          </div>
 
-          <div className="bg-bg-faint rounded-corner-md p-3 flex flex-col gap-2">
-            <p className="text-label-sm font-semibold text-text-primary">Detail Buket</p>
-            <p className="text-label-sm text-text-secondary">Ukuran: {size?.label} — {size?.stems}</p>
-            {order.customization.selectedAddonIds.length > 0 && (
-              <p className="text-label-sm text-text-secondary">
-                Tambahan: {order.customization.selectedAddonIds.map((id) => order.product.addons.find((a) => a.id === id)?.label).filter(Boolean).join(", ")}
-              </p>
-            )}
-            {order.customization.description && (
-              <div>
-                <p className="text-video-title text-text-tertiary">Permintaan khusus:</p>
-                <p className="text-label-sm text-text-primary">{order.customization.description}</p>
-              </div>
-            )}
-            {(order.customization.referenceImagePreview || order.paymentProofPreview) && (
-              <div className="flex gap-3 flex-wrap pt-1">
-                {order.customization.referenceImagePreview && (
-                  <div>
-                    <p className="text-video-title text-text-tertiary mb-1">Referensi</p>
-                    <a href={order.customization.referenceImagePreview} target="_blank" rel="noreferrer">
-                      <img src={order.customization.referenceImagePreview} alt="Referensi" className="rounded-corner-md object-cover" style={{ width: "80px", height: "80px" }} />
-                    </a>
-                  </div>
-                )}
-                {order.paymentProofPreview && (
-                  <div>
-                    <p className="text-video-title text-text-tertiary mb-1">Bukti Bayar</p>
-                    <a href={order.paymentProofPreview} target="_blank" rel="noreferrer">
-                      <img src={order.paymentProofPreview} alt="Bukti bayar" className="rounded-corner-md object-cover" style={{ width: "80px", height: "80px" }} />
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <p className="text-label-sm font-semibold text-text-primary">Ubah Status</p>
-            <div className="flex flex-wrap items-center gap-2">
-              {nextStatus && (
-                <Button variant="primary" size="small" iconEnd={<ArrowRight size={14} />} disabled={updating} onClick={() => setStatus(nextStatus)}>
-                  {updating ? "Menyimpan…" : `Majukan ke "${STATUS_CFG[nextStatus].label}"`}
-                </Button>
+            <div className="bg-bg-faint rounded-corner-md p-3 flex flex-col gap-2 border border-border-secondary/40">
+              <p className="text-label-sm font-semibold text-text-primary">Detail Buket</p>
+              <p className="text-label-sm text-text-secondary">Ukuran: {size?.label} — {size?.stems}</p>
+              {order.customization.selectedAddonIds.length > 0 && (
+                <p className="text-label-sm text-text-secondary">
+                  Tambahan: {order.customization.selectedAddonIds.map((id) => order.product.addons.find((a) => a.id === id)?.label).filter(Boolean).join(", ")}
+                </p>
               )}
-              {STATUS_FLOW.map((s) => (
-                <Button
-                  key={s}
-                  variant={s === order.status ? "neutral" : "subtle"}
-                  size="small"
-                  disabled={updating || s === order.status}
-                  iconStart={s === order.status ? <Check size={14} /> : undefined}
-                  onClick={() => setStatus(s)}
-                  className={s === order.status ? "text-brand-primary" : ""}
-                >
-                  {STATUS_CFG[s].label}
-                </Button>
-              ))}
+              {order.customization.description && (
+                <div>
+                  <p className="text-video-title text-text-tertiary">Permintaan khusus:</p>
+                  <p className="text-label-sm text-text-primary whitespace-pre-wrap leading-tight">{order.customization.description}</p>
+                </div>
+              )}
+              {(order.customization.referenceImagePreview || order.paymentProofPreview) && (
+                <div className="flex gap-3 flex-wrap pt-1">
+                  {order.customization.referenceImagePreview && (
+                    <div>
+                      <p className="text-video-title text-text-tertiary mb-1">Referensi</p>
+                      <a href={order.customization.referenceImagePreview} target="_blank" rel="noreferrer">
+                        <img src={order.customization.referenceImagePreview} alt="Referensi" className="rounded-corner-md object-cover shadow-sm" style={{ width: "80px", height: "80px" }} />
+                      </a>
+                    </div>
+                  )}
+                  {order.paymentProofPreview && (
+                    <div>
+                      <p className="text-video-title text-text-tertiary mb-1">Bukti Bayar</p>
+                      <a href={order.paymentProofPreview} target="_blank" rel="noreferrer">
+                        <img src={order.paymentProofPreview} alt="Bukti bayar" className="rounded-corner-md object-cover shadow-sm" style={{ width: "80px", height: "80px" }} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+
+            <div className="flex flex-col gap-2">
+              <p className="text-label-sm font-semibold text-text-primary">Ubah Status</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {nextStatus && (
+                  <Button variant="primary" size="small" iconEnd={<ArrowRight size={14} />} disabled={updating} onClick={() => setStatus(nextStatus)}>
+                    {updating ? "Menyimpan…" : `Majukan ke "${STATUS_CFG[nextStatus].label}"`}
+                  </Button>
+                )}
+                {STATUS_FLOW.map((s) => (
+                  <Button
+                    key={s}
+                    variant={s === order.status ? "neutral" : "subtle"}
+                    size="small"
+                    disabled={updating || s === order.status}
+                    iconStart={s === order.status ? <Check size={14} /> : undefined}
+                    onClick={() => setStatus(s)}
+                    className={s === order.status ? "text-brand-primary" : ""}
+                  >
+                    {STATUS_CFG[s].label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -207,17 +219,36 @@ export function AdminOrders() {
       {error && <p className="text-label-sm text-[var(--status-danger)] mb-3">{error}</p>}
 
       {filtered.length === 0 ? (
-        <div className="bg-surface-bg rounded-corner-lg p-8 text-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-surface-bg rounded-corner-lg p-8 text-center shadow-sm"
+        >
           <p style={{ fontSize: "40px", lineHeight: "1" }}>📭</p>
           <p className="text-label-sm text-text-secondary mt-2">Belum ada pesanan pada kategori ini.</p>
-        </div>
+        </motion.div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {filtered.map((order) => (
-            <OrderRow key={order.id} order={order} onChange={handleChange} />
-          ))}
-        </div>
+        <motion.div 
+          layout
+          className="flex flex-col gap-3"
+        >
+          <AnimatePresence mode="popLayout">
+            {filtered.map((order) => (
+              <motion.div
+                key={order.id}
+                layout
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 100, damping: 15 }}
+              >
+                <OrderRow order={order} onChange={handleChange} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
       )}
     </div>
   );
 }
+
