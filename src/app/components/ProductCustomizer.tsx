@@ -232,7 +232,7 @@ export function ProductCustomizer({ product, onBack, onNext }: ProductCustomizer
                       value={cardMessage}
                       onChange={(e) => setCardMessage(e.target.value)}
                       maxLength={150}
-                      className="w-full bg-input-bg border border-border-primary rounded-corner-md px-3 py-2 text-input focus:outline-none focus:border-border-selected focus:ring-1 focus:ring-brand-primary/20 transition-all"
+                      className="w-full bg-input-bg border border-border-primary rounded-corner-md px-3 py-2 text-input text-text-primary focus:outline-none focus:border-border-selected focus:ring-1 focus:ring-brand-primary/20 transition-all"
                     />
                     
                     {/* Live Preview Card */}

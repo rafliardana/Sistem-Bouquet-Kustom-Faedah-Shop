@@ -129,7 +129,7 @@ export function Catalog({ products, onSelect }: CatalogProps) {
               placeholder="Cari bouquet favoritmu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-input-bg border border-border-primary rounded-corner-md pl-9 pr-4 py-1.5 text-input focus:outline-none focus:border-border-selected focus:ring-1 focus:ring-brand-primary/20 transition-all"
+              className="w-full bg-input-bg border border-border-primary rounded-corner-md pl-9 pr-4 py-1.5 text-input text-text-primary focus:outline-none focus:border-border-selected focus:ring-1 focus:ring-brand-primary/20 transition-all"
             />
           </div>
         </div>
