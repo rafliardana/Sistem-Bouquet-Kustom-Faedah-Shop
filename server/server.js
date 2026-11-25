@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import crypto from "crypto";
 import { mkdirSync, writeFileSync, existsSync } from "fs";
+import multer from "multer";
 import { join, extname } from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
@@ -65,6 +66,59 @@ function uploadDataUrl(dataUrl, keyHint) {
     console.error(`Upload error (${keyHint}):`, e.message);
     return null;
   }
+}
+
+// ─── Upload multipart (untuk aplikasi mobile) ───────────
+// Multer menyimpan file di memori lalu kita tulis sendiri ke disk,
+// supaya penamaan file sama dengan jalur base64 (uploadDataUrl).
+// Multer otomatis melewati request yang bukan multipart, sehingga
+// klien web lama (JSON + base64) tetap berjalan tanpa perubahan.
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+const orderUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 2 },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) return cb(null, true);
+    cb(new Error(`Tipe file tidak didukung: ${file.mimetype}`));
+  },
+}).fields([
+  { name: "referenceImage", maxCount: 1 },
+  { name: "paymentProof", maxCount: 1 },
+]);
+
+// Bungkus multer agar error upload dikembalikan sebagai JSON 400.
+function handleOrderUpload(req, res, next) {
+  orderUpload(req, res, (err) => {
+    if (err) return res.status(400).json({ error: `Upload gagal: ${err.message}` });
+    next();
+  });
+}
+
+/**
+ * Simpan file hasil multer (buffer) ke disk. Mengembalikan nama file atau null.
+ */
+function saveUploadedFile(file, keyHint) {
+  if (!file?.buffer) return null;
+  const ext = file.mimetype.split("/")[1] ?? "bin";
+  const safeFilename = `${keyHint}-${crypto.randomUUID()}.${ext}`.replace(/[/\\]/g, "-");
+  writeFileSync(join(uploadPath, safeFilename), file.buffer);
+  return safeFilename;
+}
+
+/**
+ * Field multipart selalu berupa string; selectedAddonIds dikirim sebagai JSON array.
+ */
+function parseAddonIds(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 /**
@@ -306,12 +360,16 @@ app.put("/api/admin/payment-methods", async (req, res) => {
 // ─── Orders ─────────────────────────────────────────────
 
 // Create order (customer)
-app.post("/api/orders", async (req, res) => {
+// Menerima application/json (web, gambar base64) ATAU multipart/form-data (mobile).
+app.post("/api/orders", handleOrderUpload, async (req, res) => {
   try {
     const profile = await getAuthProfile(req);
     if (!profile) return res.status(401).json({ error: "Unauthorized: silakan login untuk membuat pesanan" });
 
-    const { productId, sizeId, description, selectedAddonIds, customerName, customerPhone, customerAddress, paymentMethod, referenceImageBase64, paymentProofBase64 } = req.body;
+    const { productId, sizeId, description, customerName, customerPhone, customerAddress, paymentMethod, referenceImageBase64, paymentProofBase64 } = req.body;
+    const selectedAddonIds = parseAddonIds(req.body.selectedAddonIds);
+    const referenceFile = req.files?.referenceImage?.[0];
+    const proofFile = req.files?.paymentProof?.[0];
 
     // Fetch product
     const productRow = await queryOne("SELECT * FROM products WHERE id = $1", [productId]);
@@ -333,9 +391,14 @@ app.post("/api/orders", async (req, res) => {
       addons: productRow.addons,
     };
 
-    const totalPrice = computeTotal(product, sizeId, selectedAddonIds ?? []);
-    const referenceImagePath = uploadDataUrl(referenceImageBase64, `reference-${profile.id}`);
-    const paymentProofPath = uploadDataUrl(paymentProofBase64, `proof-${profile.id}`);
+    const totalPrice = computeTotal(product, sizeId, selectedAddonIds);
+    // Prioritaskan file multipart; jika tidak ada, pakai jalur base64 lama.
+    const referenceImagePath = referenceFile
+      ? saveUploadedFile(referenceFile, `reference-${profile.id}`)
+      : uploadDataUrl(referenceImageBase64, `reference-${profile.id}`);
+    const paymentProofPath = proofFile
+      ? saveUploadedFile(proofFile, `proof-${profile.id}`)
+      : uploadDataUrl(paymentProofBase64, `proof-${profile.id}`);
 
     // Get payment method label
     const pmRow = await queryOne("SELECT label FROM payment_methods WHERE id = $1", [paymentMethod]);

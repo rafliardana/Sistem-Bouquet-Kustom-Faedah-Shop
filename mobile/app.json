@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Faedah Shop",
+    "slug": "faedah-shop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.faedahshop.mobile",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#EAEAFF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.faedahshop.mobile"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Faedah Shop membutuhkan akses galeri untuk mengunggah foto referensi buket dan bukti pembayaran.",
+          "cameraPermission": "Faedah Shop membutuhkan akses kamera untuk memotret referensi buket dan bukti pembayaran."
+        }
+      ],
+      "expo-font"
+    ],
+    "scheme": "faedahshop"
+  }
+}

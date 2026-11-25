@@ -1,1 +1,6 @@
 node_modules/
+
+# Secret lingkungan (jangan di-commit)
+.env
+server/.env
+mobile/.env

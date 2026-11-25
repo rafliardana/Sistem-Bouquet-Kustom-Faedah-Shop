@@ -1,0 +1,4 @@
+/* Direktif Tailwind yang diproses NativeWind saat build. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
