@@ -1,0 +1,4 @@
+/* global.css — direktif Tailwind yang diproses NativeWind saat bundling */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

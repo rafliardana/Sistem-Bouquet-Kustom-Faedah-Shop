@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import crypto from "crypto";
+import multer from "multer";
 import { mkdirSync, writeFileSync, existsSync } from "fs";
 import { join, extname } from "path";
 import { fileURLToPath } from "url";
@@ -21,7 +22,26 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
 const uploadPath = join(__dirname, UPLOAD_DIR);
 mkdirSync(uploadPath, { recursive: true });
 
+// Multipart uploader (dipakai aplikasi mobile React Native / Expo).
+// Klien web lama tetap bisa mengirim base64 lewat JSON — keduanya didukung.
+const multipartUpload = multer({
+  storage: multer.diskStorage({
+    destination: uploadPath,
+    filename: (req, file, cb) => {
+      const ext = (extname(file.originalname || "") || `.${(file.mimetype || "image/jpeg").split("/")[1]}`)
+        .replace(/[^.a-zA-Z0-9]/g, "");
+      cb(null, `${file.fieldname}-${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // maks 5 MB per gambar
+  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype)),
+});
+
 const app = express();
+
+// Percayai header X-Forwarded-* (ngrok / reverse proxy) agar req.protocol
+// bernilai "https" dan URL gambar upload yang dikirim ke mobile tetap https.
+app.set("trust proxy", true);
 
 // ─── Middleware ──────────────────────────────────────────
 app.use(cors({
@@ -306,12 +326,28 @@ app.put("/api/admin/payment-methods", async (req, res) => {
 // ─── Orders ─────────────────────────────────────────────
 
 // Create order (customer)
-app.post("/api/orders", async (req, res) => {
+// Mendukung 2 format body:
+//   1) application/json  + gambar base64 (klien web)
+//   2) multipart/form-data + file `referenceImage` & `paymentProof` (klien mobile)
+app.post(
+  "/api/orders",
+  multipartUpload.fields([
+    { name: "referenceImage", maxCount: 1 },
+    { name: "paymentProof", maxCount: 1 },
+  ]),
+  async (req, res) => {
   try {
     const profile = await getAuthProfile(req);
     if (!profile) return res.status(401).json({ error: "Unauthorized: silakan login untuk membuat pesanan" });
 
-    const { productId, sizeId, description, selectedAddonIds, customerName, customerPhone, customerAddress, paymentMethod, referenceImageBase64, paymentProofBase64 } = req.body;
+    const { productId, sizeId, description, customerName, customerPhone, customerAddress, paymentMethod, referenceImageBase64, paymentProofBase64 } = req.body;
+
+    // Pada multipart, array dikirim sebagai string JSON → parse kembali
+    let selectedAddonIds = req.body.selectedAddonIds;
+    if (typeof selectedAddonIds === "string") {
+      try { selectedAddonIds = JSON.parse(selectedAddonIds); } catch { selectedAddonIds = []; }
+    }
+    if (!Array.isArray(selectedAddonIds)) selectedAddonIds = [];
 
     // Fetch product
     const productRow = await queryOne("SELECT * FROM products WHERE id = $1", [productId]);
@@ -333,9 +369,12 @@ app.post("/api/orders", async (req, res) => {
       addons: productRow.addons,
     };
 
-    const totalPrice = computeTotal(product, sizeId, selectedAddonIds ?? []);
-    const referenceImagePath = uploadDataUrl(referenceImageBase64, `reference-${profile.id}`);
-    const paymentProofPath = uploadDataUrl(paymentProofBase64, `proof-${profile.id}`);
+    const totalPrice = computeTotal(product, sizeId, selectedAddonIds);
+    // Prioritaskan file multipart; fallback ke base64 (web)
+    const referenceImagePath =
+      req.files?.referenceImage?.[0]?.filename ?? uploadDataUrl(referenceImageBase64, `reference-${profile.id}`);
+    const paymentProofPath =
+      req.files?.paymentProof?.[0]?.filename ?? uploadDataUrl(paymentProofBase64, `proof-${profile.id}`);
 
     // Get payment method label
     const pmRow = await queryOne("SELECT label FROM payment_methods WHERE id = $1", [paymentMethod]);
